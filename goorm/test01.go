@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -19,9 +21,35 @@ import (
 
 type Common struct {
 	Id        int64     `gorm:"primary_key"`
-	CreatedAt time.Time `gorm:"not null;default:CURRENT_TIMESTAMP;index:created_at"`
+	CreatedAt time.Time `gorm:"not null;default::;index:created_at"`
 	UpdatedAt time.Time `gorm:"not null;default:CURRENT_TIMESTAMP;index:updated_at"`
 	IsDeleted bool      `gorm:"not null;default:false"`
+}
+
+type JSON json.RawMessage
+
+func (j *JSON) Scan(val interface{}) error {
+	//s := val.([]uint8)
+	//ss := strings.Split(string(s), ",")
+	//*r = ss
+	//return nil
+
+	bytes, ok := val.([]byte)
+	if !ok {
+		return errors.New(fmt.Sprint("Failed to unmarshal JSONB value:", val))
+	}
+
+	result := json.RawMessage{}
+	err := json.Unmarshal(bytes, &result)
+	*j = JSON(result)
+	return err
+}
+
+func (j JSON) Value() (driver.Value, error) {
+	if len(j) == 0 {
+		return nil, nil
+	}
+	return json.RawMessage(j).MarshalJSON()
 }
 
 type Product struct {
@@ -30,7 +58,8 @@ type Product struct {
 	CodeDesc string `gorm:"type:varchar(1000);default:''"`
 	/* 在 GORM 中设置默认值为数字 0 时，它会将其转换为 SQL 中的数字 0，默认情况下会将其作为字符串插入到 DDL 语句中，因此你看到的是 '0'。
 	要修改此行为，可以使用 GORM 模型标记 gorm:"default:0" 指定默认值。这将确保将数字 0 直接插入 DDL 语句中，而不是作为字符串。*/
-	Price int `gorm:"not null;default:0"`
+	Price int  `gorm:"not null;default:0"`
+	Tag   JSON `gorm:"type:json"`
 }
 
 // root用户名，没有密码，有密码的话就root:pwd,loc=Local 设置时区为当前时区
@@ -89,20 +118,24 @@ func main() {
 	//	"123",
 	//	"ceshi",
 	//	123,
+	//	JSON(`[]`),
 	//}
 
-	//db.First(&product, 1)
-	//
-	//db.First(&product, "code=?", "402")
 	//tx := db.Create(&product)
 	//fmt.Println(tx, product.Id, tx.Error, tx.Statement, tx.RowsAffected)
 
 	var product Product
-	db.First(&product, 1)
-	jsonData, err := json.Marshal(product)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(string(jsonData))
+	db.First(&product, 3)
+	fmt.Println(product.Tag, product.Price)
+	//
+	//db.First(&product, "code=?", "402")
+	//db.First(&product, 1)
+	//jsonData, err := json.Marshal(product)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//fmt.Println(string(jsonData))
+	//
+	//fmt.Printf("%T, %v", product.Tag, product.Tag)
 }
