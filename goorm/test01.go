@@ -21,8 +21,8 @@ import (
 
 type Common struct {
 	Id        int64     `gorm:"primary_key"`
-	CreatedAt time.Time `gorm:"not null;default::;index:created_at"`
-	UpdatedAt time.Time `gorm:"not null;default:CURRENT_TIMESTAMP;index:updated_at"`
+	CreatedAt time.Time `gorm:"not null;index:created_at"`
+	UpdatedAt time.Time `gorm:"not null;index:updated_at"`
 	IsDeleted bool      `gorm:"not null;default:false"`
 }
 
